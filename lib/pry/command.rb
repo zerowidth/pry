@@ -565,6 +565,22 @@ class Pry
         default.present?(*keys)
       end
 
+      # Check for a command presence.
+      #
+      # @example
+      #   opts.parse %w'install'
+      #   opts.command?(:install)
+      #   # => true
+      #   opts.command?(:list)
+      #   # => false
+      #
+      # @param [Symbol, String] name The name of the command to be checked
+      # @return [Boolean] `true` if the given +name+ is present in the parsed
+      #   arguments
+      def command?(name)
+        __getobj__.present?(name)
+      end
+
       # Convenience method for {#present?}.
       #
       # @example

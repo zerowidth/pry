@@ -7,6 +7,8 @@ class Pry
     BANNER
 
     def subcommands(cmd)
+      cmd.on :install
+
       cmd.on :list do |opt|
         opt.on :r, "remote", "Show the list of all available plugins"
         opt.on :f, "force",  "Refresh cached list of remote plugins"
@@ -23,6 +25,11 @@ class Pry
     end
 
     def process
+      # Process "install" subcommand.
+      if opts.command?(:install)
+        install_plugins and return
+      end
+
       # Process "list" subcommand.
       list = opts[:list]
       show_remote = list.present?(:remote)
@@ -99,6 +106,20 @@ class Pry
       end
 
       Pager.page list.join("\n")
+    end
+
+    # Installs new plugins.
+    #
+    # @note You don't have to provide {PluginManager::PRY_PLUGIN_PREFIX}.
+    #   Usually it's equal to "pry-". So the correct way to invoke this command
+    #   is: `plugin install doc stack_explorer`; "pry-stack_explorer" and
+    #   "pry-doc" gems will be installed.
+    # @return [void]
+    def install_plugins
+      opts.arguments.each do |plugin|
+        Pry.run_command(
+          "gem-install #{ PluginManager::PRY_PLUGIN_PREFIX }#{ plugin }")
+      end
     end
 
   end
