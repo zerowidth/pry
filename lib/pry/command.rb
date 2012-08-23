@@ -626,15 +626,14 @@ class Pry
     # Return an instance of Slop::Commands that can parse either subcommands
     # or the options that this command accepts.
     def slop
-      opts = proc do |opt|
-        opt.banner(unindent(self.class.banner))
-        options(opt)
-        opt.on(:h, :help, "Show this message.")
-      end
-
       Slop::Commands.new do |cmd|
         subcommands(cmd)
-        cmd.default { |opt| opts.call(opt) }
+
+        cmd.default do |opt|
+          opt.banner(unindent(self.class.banner))
+          options(opt)
+          opt.on(:h, :help, "Show this message.")
+        end
       end
     end
 
