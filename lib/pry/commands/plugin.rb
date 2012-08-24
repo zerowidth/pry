@@ -6,8 +6,14 @@ class Pry
       Usage: plugin
     BANNER
 
+    def setup
+      require 'rubygems/uninstaller' unless defined? Gem::Uninstaller
+    end
+
     def subcommands(cmd)
       cmd.on :install
+
+      cmd.on :uninstall
 
       cmd.on :list do |opt|
         opt.on :r, "remote", "Show the list of all available plugins"
@@ -28,6 +34,11 @@ class Pry
       # Process "install" subcommand.
       if opts.command?(:install)
         install_plugins and return
+      end
+
+      # Process "uninstall" subcommand.
+      if opts.command?(:uninstall)
+        uninstall_plugins and return
       end
 
       # Process "list" subcommand.
@@ -55,7 +66,7 @@ class Pry
     end
 
     # Displays the list of remote plugins. Fetches the list of remote Pry
-    # plugins if #{Pry.remote_plugins} hash is empty.
+    # plugins if {Pry.remote_plugins} hash is empty.
     #
     # @param [Boolean] force The flag, which specifies whether the list of
     #   remote plugins should be refreshed or not. If not, then it recalls
@@ -119,6 +130,30 @@ class Pry
       opts.arguments.each do |plugin|
         Pry.run_command(
           "gem-install #{ PluginManager::PRY_PLUGIN_PREFIX }#{ plugin }")
+      end
+    end
+
+    # Uninstalls plugins.
+    # @return [void]
+    def uninstall_plugins
+      destination = File.writable?(Gem.dir) ? Gem.dir : Gem.user_dir
+
+      opts.arguments.each do |plugin|
+        gem = "#{ PluginManager::PRY_PLUGIN_PREFIX }#{ plugin }"
+
+        begin
+          capture_gem_stdout do
+            uninstaller = Gem::Uninstaller.new(gem, :install_dir => destination)
+            uninstaller.uninstall
+          end
+        rescue Errno::EACCES
+          raise CommandError, "Insufficient permissions to uninstall `#{text.green gem}`."
+        rescue Gem::InstallError
+          raise CommandError, "Gem `#{text.green gem}` is not installed."
+        else
+          Gem.refresh
+          output.puts "Gem `#{text.green gem}` uninstalled."
+        end
       end
     end
 
