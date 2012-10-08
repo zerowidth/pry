@@ -261,6 +261,11 @@ class Pry
 
         Range.new(a, b)
       end
+
+      def retrieve_code_object_from_string(input, target)
+        Pry::Method.from_str(input,target) || Pry::WrappedModule.from_str(input, target)
+      end
+
     end
 
   end
