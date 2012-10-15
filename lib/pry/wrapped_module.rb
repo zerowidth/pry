@@ -192,6 +192,14 @@ class Pry
       @memoized_candidates[rank] ||= Candidate.new(self, rank)
     end
 
+    # @return [Enumerator] 
+    def candidates
+      Enumerator.new do |y|
+        (0...number_of_candidates).each do |num|
+          y << candidate(num)
+        end
+      end
+    end
 
     # @return [Fixnum] The number of candidate definitions for the
     #   current module.
