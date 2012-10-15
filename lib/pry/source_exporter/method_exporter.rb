@@ -26,28 +26,35 @@ class Pry
         end 
       end
 
-      def diff
-        Diffy::Diff.new(@original_file, generated_code).to_s
+      def diff(code=nil)
+        Diffy::Diff.new(@original_file, code || generated_code).to_s
       end
 
-      def export!
-        File.open(target_module.file, "w") { |v| v.write(@generated_code) }
+      def export!(code=nil)
+        File.open(target_module.file, "w") { |v| v.write(code || @generated_code) }
 
-        # reload only the method code to set the proper source_location (not the whole file)
-        target_module.module_eval adjusted_code, target_module.file, insertion_point + 1
-        puts "Code exported and re-loaded!"
+        if code
+          load target_module.file
+        else
+          target_module.module_eval adjusted_code, target_module.file, insertion_point + 1
+        end
       end
 
       def replacement_method?
         !!check_for_previous_definition
       end
 
+      def target_file_content
+        generated_code
+        @original_file
+      end
+
       private
       
       def setup_for_target_candidate(candidate)
         @target_module = candidate
-        @original_file = File.read(target_module.file)
-        @file_buffer = @original_file.lines.to_a
+        @original_file = File.read(target_module.file) 
+        @file_buffer   = @original_file.lines.to_a
       end
 
       def inject_method_code_at(line)
