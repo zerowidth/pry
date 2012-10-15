@@ -424,6 +424,29 @@ describe Pry::Method do
       }
     end
 
+    describe "singleton_method?" do
+      before do
+        @obj = Class.new { def inst; end }.new
+        class << @obj
+          def pub; end
+          def priv; end
+          private :priv
+        end
+      end
+          
+      it 'should identify public singleton methods' do
+        Pry::Method(@obj.method(:pub)).singleton_method?.should == true
+      end
+
+      it 'should identify private singleton methods' do
+        Pry::Method(@obj.method(:priv)).singleton_method?.should == true
+      end
+
+      it 'should NOT identify a non-singleton method' do
+        Pry::Method(@obj.method(:inst)).singleton_method?.should == false
+      end
+    end
+
     it 'should be able to find method aliases' do
       meth = Pry::Method(@class.new.method(:eat))
       aliases = Set.new(meth.aliases)
