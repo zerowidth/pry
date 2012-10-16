@@ -19,7 +19,7 @@ class Pry
       # Methods to delegate to associated `Pry::WrappedModule instance`.
       to_delegate = [:lines_for_file, :method_candidates, :name, :wrapped,
                      :yard_docs?, :number_of_candidates, :process_doc,
-                     :strip_leading_whitespace]
+                     :strip_leading_whitespace, :respond_to?, :method_missing]
 
       def_delegators :@wrapper, *to_delegate
       private(*to_delegate)

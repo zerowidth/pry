@@ -4,6 +4,7 @@ class Pry
       
       attr_accessor :method_object
       attr_reader :target_module
+      attr_reader :insertion_point
       
       def initialize(method_object, candidate_rank=0)
         @method_object = method_object
@@ -64,14 +65,17 @@ class Pry
 
       def add_new_method
         setup_for_target_candidate(find_first_valid_candidate)
+        @insertion_point = default_insertion_point
         inject_method_code_at default_insertion_point
       end
 
       def replace_prior_method(method_location)
         candidate, line = method_location
         setup_for_target_candidate(candidate)
+        
+        @insertion_point = line - 1
         remove_method_at(line)
-        inject_method_code_at (line - 1)
+        inject_method_code_at(line - 1)
       end
 
       def remove_method_at(line)
