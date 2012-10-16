@@ -50,7 +50,7 @@ class Pry
 
     def confirm_export(exporter, code=nil)
       show_diff(exporter, code)
-      output.puts "If you are happy with the changes, press y<enter> to write the code to diskor E<edit> the code in an editor. Use ^D to cancel."
+      output.puts "If you are happy with the changes, press y<enter> to write the code to disk or E<edit> the code in an editor. Use ^D to cancel."
       answer = $stdin.gets.to_s.chomp
       if answer.upcase == "Y"
         exporter.export!(code)
