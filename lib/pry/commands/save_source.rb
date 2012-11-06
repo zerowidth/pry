@@ -48,6 +48,19 @@ class Pry
       confirm_export(exporter)
     end
 
+    def save_module
+      methods_to_save = @code_object.all_methods.select { |v| v.source_file == Pry.eval_path }
+
+      if methods_to_save.any?
+        output.puts "About to save #{methods_to_save.map(&:name_with_owner).join ', '}" 
+        methods_to_save.each do |method|
+          confirm_export(SourceExporter.for(method, 0))
+        end
+      else
+        output.puts "Nothing to save."
+      end
+    end
+
     def confirm_export(exporter, code=nil)
       show_diff(exporter, code)
       output.puts "If you are happy with the changes, press y<enter> to write the code to disk or E<edit> the code in an editor. Use ^D to cancel."
@@ -73,22 +86,32 @@ class Pry
       end
     end
 
-    def show_diff(exporter, code=nil)
-      text_size = @code_object.source.lines.count
+    def start_and_end_lines_for_diff(exporter)
+      method_object = exporter.method_object
+      
+      text_size = method_object.source.lines.count
 
+      start_line = (exporter.insertion_point - 5) < 1 ? 1 : (exporter.insertion_point - 5)
+      end_line = exporter.insertion_point + text_size + 5
+
+      [start_line, end_line]
+    end
+    
+    def show_diff(exporter,code=nil)
       # FIXME
       # this is a workaround for a fucking bug in Diffy
       # without this line it puts + before EVERY line in the diff 
       exporter.diff(code).to_s
 
-      num_entries = code ? 1000 : text_size + 10
-      
+      diff = exporter.diff(code)
+
       out = %{
 #{text.bold("Export diff for #{arg_string} method is: ")}
 ---
 
 ..clipped..
-#{colorize_code exporter.diff(code).lines.to_a.last(num_entries).join}
+#{Pry::Code.new(diff).between(*start_and_end_lines_for_diff(exporter))}
+..clipped..
 }
       stagger_output out
     end

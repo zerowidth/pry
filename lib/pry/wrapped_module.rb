@@ -212,6 +212,12 @@ class Pry
       !!(defined?(YARD) && YARD::Registry.at(name))
     end
 
+    # Return all methods (instance methods and class methods) for the
+    # given module.
+    def all_methods
+      all_from_common(wrapped, :instance_method) + all_from_common(wrapped, :method)
+    end
+
     private
 
     # @return [Pry::WrappedModule::Candidate] The candidate of rank 0,
@@ -239,19 +245,13 @@ class Pry
     def all_source_locations_by_popularity
       return @all_source_locations_by_popularity if @all_source_locations_by_popularity
 
-      ims = all_methods_for(wrapped)
+      ims = all_methods
 
       # reject __class_init__ because it's an odd rbx specific thing that causes tests to fail
       ims = ims.select(&:source_location).reject{ |x| x.name == '__class_init__' }
 
       @all_source_locations_by_popularity = ims.group_by { |v| Array(v.source_location).first }.
         sort_by { |k, v| -v.size }
-    end
-
-    # Return all methods (instance methods and class methods) for a
-    # given module.
-    def all_methods_for(mod)
-      all_from_common(mod, :instance_method) + all_from_common(mod, :method)
     end
 
     # FIXME: a variant of this method is also found in Pry::Method
