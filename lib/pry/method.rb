@@ -290,23 +290,27 @@ class Pry
       false
     end
 
+    # @param [Boolean] raw Whether the raw docs are returned
+    #   i.e leading hashes are unstripped.
     # @return [String, nil] The documentation for the method, or `nil` if it's
     #   unavailable.
     # @raise [CommandError] Raises when the method was defined in the REPL.
-    def doc
+    def doc(raw=false)
       @doc ||= case source_type
-        when :c
-          info = pry_doc_info
-          info.docstring if info
-        when :ruby
-          if Helpers::BaseHelpers.rbx? && !pry_method?
-            strip_leading_hash_and_whitespace_from_ruby_comments(core_doc)
-          elsif pry_method?
-            strip_leading_hash_and_whitespace_from_ruby_comments(doc_for_pry_method)
-          else
-            strip_leading_hash_and_whitespace_from_ruby_comments(@method.comment)
-          end
-        end
+               when :c
+                 info = pry_doc_info
+                 info.docstring if info
+               when :ruby
+                 if Helpers::BaseHelpers.rbx? && !pry_method?
+                   raw_doc = core_doc
+                 elsif pry_method?
+                   raw_doc = doc_for_pry_method
+                 else
+                   raw_doc = @method.comment
+                 end
+                 raw ? strip_leading_whitespace(raw_doc) :
+                   strip_leading_hash_and_whitespace_from_ruby_comments(raw_doc)
+               end
     end
 
     # @return [Symbol] The source type of the method. The options are
