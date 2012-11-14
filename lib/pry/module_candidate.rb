@@ -19,11 +19,15 @@ class Pry
       # Methods to delegate to associated `Pry::WrappedModule instance`.
       to_delegate = [:lines_for_file, :method_candidates, :name, :wrapped,
                      :yard_docs?, :number_of_candidates, :process_doc,
-                     :strip_leading_whitespace, :respond_to?, :method_missing]
+                     :strip_leading_whitespace, :respond_to?]
 
       def_delegators :@wrapper, *to_delegate
       private(*to_delegate)
 
+      def method_missing(*args, &block)
+        @wrapper.send(*args, &block)
+      end
+      
       # @raise [Pry::CommandError] If `rank` is out of bounds.
       # @param [Pry::WrappedModule] wrapper The associated
       #   `Pry::WrappedModule` instance that owns the candidates.
@@ -53,6 +57,7 @@ class Pry
         raise CommandError, "Could not locate source for #{wrapped}!" if file.nil?
 
         @source = strip_leading_whitespace(Pry::Code.from_file(file).expression_at(line, number_of_lines_in_first_chunk))
+        @source
       end
 
       # @raise [Pry::CommandError] If documentation cannot be found.
@@ -75,14 +80,10 @@ class Pry
 
         return nil if !file.is_a?(String)
 
-        class_regexes = [/^\s*#{mod_type_string}\s*(\w*)(::)?#{wrapped.name.split(/::/).last}/,
-                         /^\s*(::)?#{wrapped.name.split(/::/).last}\s*?=\s*?#{wrapped.class}/,
-                         /^\s*(::)?#{wrapped.name.split(/::/).last}\.(class|instance)_eval/]
-
         host_file_lines = lines_for_file(file)
 
         search_lines = host_file_lines[0..(line - 2)]
-        idx = search_lines.rindex { |v| class_regexes.any? { |r| r =~ v } }
+        idx = search_lines.rindex { |v| start_of_class_definition?(v) }
 
         @source_location = [file,  idx + 1]
       rescue Pry::RescuableException
@@ -102,7 +103,7 @@ class Pry
       # @return [Array] The source location of the last method in this
       #   candidate's module definition.
       def last_method_source_location
-        @end_method_source_location ||= adjusted_source_location(method_candidates[@rank].last.source_location)
+        @last_method_source_location ||= adjusted_source_location(method_candidates[@rank].last.source_location)
       end
 
       # Return the number of lines between the start of the class definition
@@ -116,6 +117,18 @@ class Pry
         end_method_line - line
       end
 
+      def start_of_class_definition?(line)
+        class_regexes.any? { |r| r =~ line }
+      end
+
+      def class_regexes
+        mod_type_string = wrapped.class.to_s.downcase
+        
+        [/^\s*#{mod_type_string}\s*(\w*)(::)?#{wrapped.name.split(/::/).last}/,
+         /^\s*(::)?#{wrapped.name.split(/::/).last}\s*?=\s*?#{wrapped.class}/,
+         /^\s*(::)?#{wrapped.name.split(/::/).last}\.(class|instance)_eval/]
+      end
+
       def adjusted_source_location(sl)
         file, line = sl
 
@@ -125,6 +138,64 @@ class Pry
 
         [file, line]
       end
+
+      def extract_multiple_module_definitions(code)
+        code.lines.map.with_index do |line, index|
+          start_of_class_definition?(line) ? Pry::Code.new(code).expression_at(index + 1).to_s : nil
+        end.compact
+      end
+
+      def remove_overridden_methods(code)
+        pry_methods = all_methods.select(&:pry_method?)
+        lines = code.lines.to_a
+
+        offset = 0
+        while idx = lines.find_index { |line| method_definition?(line) }
+          if pry_methods.none? { |v| v.source_location.last == line + idx - offset }
+            method_length = Pry::Code.new(lines).expression_at(idx + 1).lines.count
+            lines.slice!(idx, method_length)
+            offset += method_length
+          end
+        end
+
+        lines.join
+      end
+
+      def merge_module_definitions(code)
+        definitions = extract_multiple_module_definitions(code)
+
+        definitions = definitions.map { |definition| remove_all_methods(definition) }
+        
+        if definitions.size > 1
+          mods = definitions[1..-1].map do |definition|
+            definition.lines.to_a[1..-2].join
+          end.join("\n")
+
+          definitions[0].lines.to_a.insert(-2, *mods).join
+        else
+          definitions.first
+        end
+      end
+
+      def method_definition?(line)
+        /\s*define_(?:singleton_)?method\(?\s*[:\"\']|\s*def\s+/=~ line
+      end
+
+      def remove_all_methods(definition)
+        lines = definition.lines.to_a
+
+        while idx = lines.find_index { |line, index| method_definition?(line) }
+          method_length = Pry::Code.new(lines).expression_at(idx + 1).lines.count
+          lines.slice!(idx, method_length) 
+        end
+
+        lines.join
+      end
+
+      def inject_all_pry_methods(definition)
+        all_methods.select { |v| v.pry_method? }        
+      end
+      
     end
   end
 end

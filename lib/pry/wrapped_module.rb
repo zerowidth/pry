@@ -212,8 +212,8 @@ class Pry
       !!(defined?(YARD) && YARD::Registry.at(name))
     end
 
-    # Return all methods (instance methods and class methods) for the
-    # given module.
+    # Return all methods (instance methods and class methods).
+    # @return [Array<Method, UnboundMethod>] 
     def all_methods
       all_from_common(wrapped, :instance_method) + all_from_common(wrapped, :method)
     end
