@@ -71,6 +71,10 @@ class Pry
     def perform_play
       process_non_opt
 
+      if in_pipe?
+        self.content = pipe.read
+      end
+
       if opts.present?(:lines)
         self.content = restrict_to_lines(self.content, opts[:l])
       end

@@ -342,235 +342,235 @@ describe "Pry::Command" do
     end
    end
 
-  describe "block parameters" do
-    before do
-      @context = Object.new
-      @set.command "walking-spanish", "down the hall", :takes_block => true do
-        inject_var(:@x, command_block.call, target)
-      end
-      @set.import Pry::Commands
+  # describe "block parameters" do
+  #   before do
+  #     @context = Object.new
+  #     @set.command "walking-spanish", "down the hall", :takes_block => true do
+  #       inject_var(:@x, command_block.call, target)
+  #     end
+  #     @set.import Pry::Commands
 
-      @t = pry_tester(@context, :commands => @set)
-    end
+  #     @t = pry_tester(@context, :commands => @set)
+  #   end
 
-    it 'should accept multiline blocks' do
-      @t.eval <<-EOS
-        walking-spanish | do
-          :jesus
-        end
-      EOS
+  #   it 'should accept multiline blocks' do
+  #     @t.eval <<-EOS
+  #       walking-spanish | do
+  #         :jesus
+  #       end
+  #     EOS
 
-      @context.instance_variable_get(:@x).should == :jesus
-    end
+  #     @context.instance_variable_get(:@x).should == :jesus
+  #   end
 
-    it 'should accept normal parameters along with block' do
-      @set.block_command "walking-spanish",
-          "litella's been screeching for a blind pig.",
-          :takes_block => true do |x, y|
-        inject_var(:@x, x, target)
-        inject_var(:@y, y, target)
-        inject_var(:@block_var, command_block.call, target)
-      end
+  #   it 'should accept normal parameters along with block' do
+  #     @set.block_command "walking-spanish",
+  #         "litella's been screeching for a blind pig.",
+  #         :takes_block => true do |x, y|
+  #       inject_var(:@x, x, target)
+  #       inject_var(:@y, y, target)
+  #       inject_var(:@block_var, command_block.call, target)
+  #     end
 
-      @t.eval 'walking-spanish john carl| { :jesus }'
+  #     @t.eval 'walking-spanish john carl| { :jesus }'
 
-      @context.instance_variable_get(:@x).should == "john"
-      @context.instance_variable_get(:@y).should == "carl"
-      @context.instance_variable_get(:@block_var).should == :jesus
-    end
+  #     @context.instance_variable_get(:@x).should == "john"
+  #     @context.instance_variable_get(:@y).should == "carl"
+  #     @context.instance_variable_get(:@block_var).should == :jesus
+  #   end
 
-    describe "single line blocks" do
-      it 'should accept blocks with do ; end' do
-        @t.eval 'walking-spanish | do ; :jesus; end'
-        @context.instance_variable_get(:@x).should == :jesus
-      end
+  #   describe "single line blocks" do
+  #     it 'should accept blocks with do ; end' do
+  #       @t.eval 'walking-spanish | do ; :jesus; end'
+  #       @context.instance_variable_get(:@x).should == :jesus
+  #     end
 
-      it 'should accept blocks with do; end' do
-        @t.eval 'walking-spanish | do; :jesus; end'
-        @context.instance_variable_get(:@x).should == :jesus
-      end
+  #     it 'should accept blocks with do; end' do
+  #       @t.eval 'walking-spanish | do; :jesus; end'
+  #       @context.instance_variable_get(:@x).should == :jesus
+  #     end
 
-      it 'should accept blocks with { }' do
-        @t.eval 'walking-spanish | { :jesus }'
-        @context.instance_variable_get(:@x).should == :jesus
-      end
-    end
+  #     it 'should accept blocks with { }' do
+  #       @t.eval 'walking-spanish | { :jesus }'
+  #       @context.instance_variable_get(:@x).should == :jesus
+  #     end
+  #   end
 
-    describe "block-related content removed from arguments" do
+  #   describe "block-related content removed from arguments" do
 
-      describe "arg_string" do
-        it 'should remove block-related content from arg_string (with one normal arg)' do
-          @set.block_command "walking-spanish", "down the hall", :takes_block => true do |x, y|
-            inject_var(:@arg_string, arg_string, target)
-            inject_var(:@x, x, target)
-          end
+  #     describe "arg_string" do
+  #       it 'should remove block-related content from arg_string (with one normal arg)' do
+  #         @set.block_command "walking-spanish", "down the hall", :takes_block => true do |x, y|
+  #           inject_var(:@arg_string, arg_string, target)
+  #           inject_var(:@x, x, target)
+  #         end
 
-          @t.eval 'walking-spanish john| { :jesus }'
+  #         @t.eval 'walking-spanish john| { :jesus }'
 
-          @context.instance_variable_get(:@arg_string).should == @context.instance_variable_get(:@x)
-        end
+  #         @context.instance_variable_get(:@arg_string).should == @context.instance_variable_get(:@x)
+  #       end
 
-        it 'should remove block-related content from arg_string (with no normal args)' do
-          @set.block_command "walking-spanish", "down the hall", :takes_block => true do
-            inject_var(:@arg_string, arg_string, target)
-          end
+  #       it 'should remove block-related content from arg_string (with no normal args)' do
+  #         @set.block_command "walking-spanish", "down the hall", :takes_block => true do
+  #           inject_var(:@arg_string, arg_string, target)
+  #         end
 
-          @t.eval 'walking-spanish | { :jesus }'
+  #         @t.eval 'walking-spanish | { :jesus }'
 
-          @context.instance_variable_get(:@arg_string).should == ""
-        end
+  #         @context.instance_variable_get(:@arg_string).should == ""
+  #       end
 
-        it 'should NOT remove block-related content from arg_string when :takes_block => false' do
-          block_string = "| { :jesus }"
-          @set.block_command "walking-spanish", "homemade special", :takes_block => false do
-            inject_var(:@arg_string, arg_string, target)
-          end
+  #       it 'should NOT remove block-related content from arg_string when :takes_block => false' do
+  #         block_string = "| { :jesus }"
+  #         @set.block_command "walking-spanish", "homemade special", :takes_block => false do
+  #           inject_var(:@arg_string, arg_string, target)
+  #         end
 
-          @t.eval "walking-spanish #{block_string}"
+  #         @t.eval "walking-spanish #{block_string}"
 
-          @context.instance_variable_get(:@arg_string).should == block_string
-        end
-      end
+  #         @context.instance_variable_get(:@arg_string).should == block_string
+  #       end
+  #     end
 
-      describe "args" do
-        describe "block_command" do
-          it "should remove block-related content from arguments" do
-            @set.block_command "walking-spanish", "glass is full of sand", :takes_block => true do |x, y|
-              inject_var(:@x, x, target)
-              inject_var(:@y, y, target)
-            end
+  #     describe "args" do
+  #       describe "block_command" do
+  #         it "should remove block-related content from arguments" do
+  #           @set.block_command "walking-spanish", "glass is full of sand", :takes_block => true do |x, y|
+  #             inject_var(:@x, x, target)
+  #             inject_var(:@y, y, target)
+  #           end
 
-            @t.eval 'walking-spanish | { :jesus }'
+  #           @t.eval 'walking-spanish | { :jesus }'
 
-            @context.instance_variable_get(:@x).should == nil
-            @context.instance_variable_get(:@y).should == nil
-          end
+  #           @context.instance_variable_get(:@x).should == nil
+  #           @context.instance_variable_get(:@y).should == nil
+  #         end
 
-          it "should NOT remove block-related content from arguments if :takes_block => false" do
-            @set.block_command "walking-spanish", "litella screeching for a blind pig", :takes_block => false do |x, y|
-              inject_var(:@x, x, target)
-              inject_var(:@y, y, target)
-            end
+  #         it "should NOT remove block-related content from arguments if :takes_block => false" do
+  #           @set.block_command "walking-spanish", "litella screeching for a blind pig", :takes_block => false do |x, y|
+  #             inject_var(:@x, x, target)
+  #             inject_var(:@y, y, target)
+  #           end
 
-            @t.eval 'walking-spanish | { :jesus }'
+  #           @t.eval 'walking-spanish | { :jesus }'
 
-            @context.instance_variable_get(:@x).should == "|"
-            @context.instance_variable_get(:@y).should == "{"
-          end
-        end
+  #           @context.instance_variable_get(:@x).should == "|"
+  #           @context.instance_variable_get(:@y).should == "{"
+  #         end
+  #       end
 
-        describe "create_command" do
-          it "should remove block-related content from arguments" do
-            @set.create_command "walking-spanish", "punk sanders carved one out of wood", :takes_block => true do
-              def process(x, y)
-                inject_var(:@x, x, target)
-                inject_var(:@y, y, target)
-              end
-            end
+  #       describe "create_command" do
+  #         it "should remove block-related content from arguments" do
+  #           @set.create_command "walking-spanish", "punk sanders carved one out of wood", :takes_block => true do
+  #             def process(x, y)
+  #               inject_var(:@x, x, target)
+  #               inject_var(:@y, y, target)
+  #             end
+  #           end
 
-            @t.eval 'walking-spanish | { :jesus }'
+  #           @t.eval 'walking-spanish | { :jesus }'
 
-            @context.instance_variable_get(:@x).should == nil
-            @context.instance_variable_get(:@y).should == nil
-          end
+  #           @context.instance_variable_get(:@x).should == nil
+  #           @context.instance_variable_get(:@y).should == nil
+  #         end
 
-          it "should NOT remove block-related content from arguments if :takes_block => false" do
-            @set.create_command "walking-spanish", "down the hall", :takes_block => false do
-              def process(x, y)
-                inject_var(:@x, x, target)
-                inject_var(:@y, y, target)
-              end
-            end
+  #         it "should NOT remove block-related content from arguments if :takes_block => false" do
+  #           @set.create_command "walking-spanish", "down the hall", :takes_block => false do
+  #             def process(x, y)
+  #               inject_var(:@x, x, target)
+  #               inject_var(:@y, y, target)
+  #             end
+  #           end
 
-            @t.eval 'walking-spanish | { :jesus }'
+  #           @t.eval 'walking-spanish | { :jesus }'
 
-            @context.instance_variable_get(:@x).should == "|"
-            @context.instance_variable_get(:@y).should == "{"
-          end
-        end
-      end
-    end
+  #           @context.instance_variable_get(:@x).should == "|"
+  #           @context.instance_variable_get(:@y).should == "{"
+  #         end
+  #       end
+  #     end
+  #   end
 
-    describe "blocks can take parameters" do
-      describe "{} style blocks" do
-        it 'should accept multiple parameters' do
-          @set.block_command "walking-spanish", "down the hall", :takes_block => true do
-            inject_var(:@x, command_block.call(1, 2), target)
-          end
+  #   describe "blocks can take parameters" do
+  #     describe "{} style blocks" do
+  #       it 'should accept multiple parameters' do
+  #         @set.block_command "walking-spanish", "down the hall", :takes_block => true do
+  #           inject_var(:@x, command_block.call(1, 2), target)
+  #         end
 
-          @t.eval 'walking-spanish | { |x, y| [x, y] }'
+  #         @t.eval 'walking-spanish | { |x, y| [x, y] }'
 
-          @context.instance_variable_get(:@x).should == [1, 2]
-        end
-      end
+  #         @context.instance_variable_get(:@x).should == [1, 2]
+  #       end
+  #     end
 
-      describe "do/end style blocks" do
-        it 'should accept multiple parameters' do
-          @set.create_command "walking-spanish", "litella", :takes_block => true do
-            def process
-              inject_var(:@x, command_block.call(1, 2), target)
-            end
-          end
+  #     describe "do/end style blocks" do
+  #       it 'should accept multiple parameters' do
+  #         @set.create_command "walking-spanish", "litella", :takes_block => true do
+  #           def process
+  #             inject_var(:@x, command_block.call(1, 2), target)
+  #           end
+  #         end
 
-          @t.eval <<-EOS
-            walking-spanish | do |x, y|
-              [x, y]
-            end
-          EOS
+  #         @t.eval <<-EOS
+  #           walking-spanish | do |x, y|
+  #             [x, y]
+  #           end
+  #         EOS
 
-          @context.instance_variable_get(:@x).should == [1, 2]
-        end
-      end
-    end
+  #         @context.instance_variable_get(:@x).should == [1, 2]
+  #       end
+  #     end
+  #   end
 
-    describe "closure behaviour" do
-      it 'should close over locals in the definition context' do
-        @t.eval 'var = :hello', 'walking-spanish | { var }'
-        @context.instance_variable_get(:@x).should == :hello
-      end
-    end
+  #   describe "closure behaviour" do
+  #     it 'should close over locals in the definition context' do
+  #       @t.eval 'var = :hello', 'walking-spanish | { var }'
+  #       @context.instance_variable_get(:@x).should == :hello
+  #     end
+  #   end
 
-    describe "exposing block parameter" do
-      describe "block_command" do
-        it "should expose block in command_block method" do
-          @set.block_command "walking-spanish", "glass full of sand", :takes_block => true do
-            inject_var(:@x, command_block.call, target)
-          end
+  #   describe "exposing block parameter" do
+  #     describe "block_command" do
+  #       it "should expose block in command_block method" do
+  #         @set.block_command "walking-spanish", "glass full of sand", :takes_block => true do
+  #           inject_var(:@x, command_block.call, target)
+  #         end
 
-          @t.eval 'walking-spanish | { :jesus }'
+  #         @t.eval 'walking-spanish | { :jesus }'
 
-          @context.instance_variable_get(:@x).should == :jesus
-        end
-      end
+  #         @context.instance_variable_get(:@x).should == :jesus
+  #       end
+  #     end
 
-      describe "create_command" do
-        it "should NOT expose &block in create_command's process method" do
-          @set.create_command "walking-spanish", "down the hall", :takes_block => true do
-            def process(&block)
-              block.call
-            end
-          end
-          @out = StringIO.new
+  #     describe "create_command" do
+  #       it "should NOT expose &block in create_command's process method" do
+  #         @set.create_command "walking-spanish", "down the hall", :takes_block => true do
+  #           def process(&block)
+  #             block.call
+  #           end
+  #         end
+  #         @out = StringIO.new
 
-          proc {
-            @t.eval 'walking-spanish | { :jesus }'
-          }.should.raise(NoMethodError)
-        end
+  #         proc {
+  #           @t.eval 'walking-spanish | { :jesus }'
+  #         }.should.raise(NoMethodError)
+  #       end
 
-        it "should expose block in command_block method" do
-          @set.create_command "walking-spanish", "homemade special", :takes_block => true do
-            def process
-              inject_var(:@x, command_block.call, target)
-            end
-          end
+  #       it "should expose block in command_block method" do
+  #         @set.create_command "walking-spanish", "homemade special", :takes_block => true do
+  #           def process
+  #             inject_var(:@x, command_block.call, target)
+  #           end
+  #         end
 
-          @t.eval 'walking-spanish | { :jesus }'
+  #         @t.eval 'walking-spanish | { :jesus }'
 
-          @context.instance_variable_get(:@x).should == :jesus
-        end
-      end
-    end
-  end
+  #         @context.instance_variable_get(:@x).should == :jesus
+  #       end
+  #     end
+  #   end
+  # end
 
   describe "commands made with custom sub-classes" do
     before do

@@ -69,7 +69,11 @@ class Pry
                         command_error("#{saught_in_vain} `#{input}'", true)
                       end
 
-        render_output(code_or_doc, opts)
+        if !out_pipe?
+          render_output(code_or_doc, opts)
+        else
+          pipe.write(code_or_doc)
+        end
       end
 
       def process_blank

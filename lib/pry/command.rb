@@ -6,6 +6,20 @@ class Pry
   # {Pry::CommandSet#command} which creates a BlockCommand or {Pry::CommandSet#create_command}
   # which creates a ClassCommand. Please don't use this class directly.
   class Command
+    class Pipe
+      attr_accessor :in
+      attr_accessor :out
+      attr_accessor :use_pipe_for_output
+
+      def read
+        @in
+      end
+
+      def write(obj)
+        @out = obj
+      end
+    end
+
     extend Helpers::DocumentationHelpers
 
     # represents a void return value for a command
@@ -185,6 +199,9 @@ class Pry
     attr_accessor :command_set
     attr_accessor :_pry_
 
+    # @return [Pry::Command::Pipe] The pipe object.
+    attr_accessor :pipe
+
     # The block we pass *into* a command so long as `:takes_block` is
     # not equal to `false`
     # @example
@@ -192,6 +209,14 @@ class Pry
     #     puts "block content"
     #   end
     attr_accessor :command_block
+
+    def in_pipe?
+      !!pipe.in
+    end
+
+    def out_pipe?
+      !!pipe.use_pipe_for_output
+    end
 
     # Run a command from another command.
     # @param [String] command_string The string that invokes the command
@@ -225,6 +250,7 @@ class Pry
     # Instantiate a command, in preparation for calling it.
     # @param [Hash] context The runtime context to use with this command.
     def initialize(context={})
+      self.pipe         = Pipe.new
       self.context      = context
       self.target       = context[:target]
       self.output       = context[:output]

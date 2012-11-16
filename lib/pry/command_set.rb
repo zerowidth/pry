@@ -8,6 +8,9 @@ class Pry
   # This class is used to create sets of commands. Commands can be imported from
   # different sets, aliased, removed, etc.
   class CommandSet
+
+    PIPE = /(?<=[^'"])(?<=.)*?\|(?=.*)(?<=[^'"])/
+
     include Enumerable
     include Pry::Helpers::BaseHelpers
 
@@ -340,9 +343,25 @@ class Pry
     # @param [Hash] context The context to execute the commands with
     # @return [CommandSet::Result]
     def process_line(val, context={})
-      if command = find_command(val)
-        context = context.merge(:command_set => self)
-        retval = command.new(context).process_line(val)
+      context = context.merge(:command_set => self)
+
+      pipe_chain = val.split(PIPE).map(&:strip).map { |v| [find_command(v), v] }
+
+      if pipe_chain.any? && pipe_chain[0].first
+        retval = nil
+
+        pipe_chain.each_with_index.inject(nil) do |previous_pipe_out, (command_info, idx)|
+          command_class, invocation = command_info
+          command = command_class.new(context)
+
+          command.pipe.in = previous_pipe_out
+          command.pipe.use_pipe_for_output = true if idx < (pipe_chain.size - 1)
+
+          retval = command.process_line(invocation)
+
+          command.pipe.out
+        end
+
         Result.new(true, retval)
       else
         Result.new(false)
