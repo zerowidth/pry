@@ -38,7 +38,7 @@ class Pry
           Pry::Method.from_str(input,target) || Pry::WrappedModule.from_str(input, target)
         end
       end
-      
+
       # Return the file and line for a Binding.
       # @param [Binding] target The binding
       # @return [Array] The file and line
