@@ -92,17 +92,16 @@ class Pry
       #
       # @param [Hash{String => PluginManager::Plugin}] plugins The Array of
       #   installed plugins.
-      # @param [IO] output The output stream.
       # @return [void]
-      def show_installed_plugins(plugins, output = Pry.config.output)
+      def show_installed_plugins(plugins)
         plugins_list = []
-        plugins_list << "Installed Plugins:" << "--"
+        plugins_list << 'Installed Plugins:' << '--'
 
         plugins.each do |name, plugin|
           plugins_list << "#{ name }".ljust(18) + plugin.spec.summary
         end
 
-        Helpers::BaseHelpers.stagger_output plugins_list.join("\n"), output
+        Pager.page(plugins_list.join("\n"))
       end
 
       # Display a list of all remote plugins. Remote plugins are Ruby gems that
@@ -110,34 +109,33 @@ class Pry
       #
       # @param [Hash{String => PluginManager::RemotePlugin}] plugins The array of
       #   remote plugins.
-      # @param [IO] output The output stream.
       # @return [void]
-      def show_remote_plugins(plugins, output = Pry.config.output)
+      def show_remote_plugins(plugins)
         plugins_list = []
-        plugins_list << "Remote Plugins:" << "--"
+        plugins_list << 'Remote Plugins:' << '--'
 
         # Exclude Pry's dependencies and Pry itself, because they're already
         # installed in the system (you won't be able to use Pry otherwise).
-        exclude_deps = Gem::Specification.find_by_name("pry").dependencies.map(&:name)
-        exclude_deps << "pry"
+        exclude_deps = Gem::Specification.find_by_name('pry').dependencies.map(&:name)
+        exclude_deps << 'pry'
 
         plugins.each_with_index do |(name, plugin), index|
           index += 1
           name = text.bold(name.ljust(4))
-          deps = plugin.dependencies["runtime"].map { |dep| dep["name"]  } - exclude_deps
+          deps = plugin.dependencies['runtime'].map { |dep| dep['name'] } - exclude_deps
           info = text.indent(text.wrap(plugin.info, 74), 6)
 
           unless deps.empty?
             dependencies = text.indent("\n\nDependencies:\n", 6)
-            dependencies << text.indent(text.wrap(deps.join(", "), 72), 8)
+            dependencies << text.indent(text.wrap(deps.join(', '), 72), 8)
           end
 
-          entry = [index, ". ", name, "\n", info, dependencies].join
+          entry = [index, '. ', name, "\n", info, dependencies].join
 
           plugins_list << entry
         end
 
-        Helpers::BaseHelpers.stagger_output plugins_list.join("\n"), output
+        Pager.page(plugins_list.join("\n"))
       end
     end
 
