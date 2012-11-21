@@ -130,7 +130,6 @@ Copyright (c) 2011 John Mair (banisterfiend)
 
   on "installed-plugins", "List installed plugins." do
     Pry::PluginManager.show_installed_plugins(Pry.plugins)
-    exit
   end
 
   on "simple-prompt", "Enable simple prompt mode" do
