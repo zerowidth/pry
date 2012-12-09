@@ -120,6 +120,10 @@ class Pry
         command_regex =~ val
       end
 
+      def requires_prefix?
+        !!options[:use_prefix]
+      end
+
       # How well does this command match the given line?
       #
       # Higher scores are better because they imply that this command matches
@@ -152,11 +156,7 @@ class Pry
       end
 
       def command_regex
-        pr = defined?(Pry.config.command_prefix) ? Pry.config.command_prefix : ""
-        prefix = convert_to_regex(pr)
-        prefix = "(?:#{prefix})?" unless options[:use_prefix]
-
-        /^#{prefix}#{convert_to_regex(match)}(?!\S)/
+        @command_regex ||= /^#{convert_to_regex(match)}(?!\S)/
       end
 
       def convert_to_regex(obj)

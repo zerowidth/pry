@@ -313,7 +313,18 @@ class Pry
     # @param [String] val The line that might be a command invocation
     # @return [Pry::Command, nil]
     def find_command(val)
-      commands.values.select{ |c| c.matches?(val) }.sort_by{ |c| c.match_score(val) }.last
+      prefix = defined?(Pry.config.command_prefix) ? Pry.config.command_prefix : ''
+
+      if val.start_with?(prefix)
+        val        = val.slice(prefix.length..-1)
+        had_prefix = true
+      end
+
+      commands.values.select do |c|
+        (!c.requires_prefix? || had_prefix) && c.matches?(val)
+      end.sort_by do |c|
+        c.match_score(val)
+      end.last
     end
     alias_method :[], :find_command
 
