@@ -226,6 +226,7 @@ rescue LoadError
 end
 
 require 'pry/version'
+require 'pry/callbacks'
 require 'pry/repl'
 require 'pry/rbx_method'
 require 'pry/rbx_path'

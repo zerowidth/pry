@@ -48,8 +48,6 @@ class Pry
 
   attr_accessor :extra_sticky_locals
 
-  attr_accessor :suppress_output
-
   # This is exposed via Pry::Command#state.
   attr_reader :command_state
 
@@ -96,10 +94,11 @@ class Pry
     @command_state = {}
     @eval_string   = ""
     @backtrace     = options[:backtrace] || caller
+    @callbacks     = Pry::Callbacks.new
 
     refresh_config(options)
-
     push_initial_binding(options[:target])
+    set_default_callbacks
 
     set_last_result nil
     @input_array << nil # add empty input so _in_ and _out_ match
@@ -129,6 +128,21 @@ class Pry
     end
 
     true
+  end
+
+  def set_default_callbacks
+    @callbacks.handle_result = proc do |result|
+      guard_output do
+        output.write(Pry.config.output_prefix)
+        print.call(output, result)
+      end
+    end
+
+    @callbacks.handle_error = proc do |error|
+      guard_output do
+        exception_handler.call(output, error, self)
+      end
+    end
   end
 
   # Initialize this instance by pushing its initial context into the binding
@@ -293,7 +307,6 @@ class Pry
     ensure_correct_encoding!(line)
     Pry.history << line unless options[:generated]
 
-    @suppress_output = false
     inject_sticky_locals!
     begin
       if !process_command_safely(line.lstrip)
@@ -301,10 +314,9 @@ class Pry
       end
     rescue RescuableException => e
       self.last_exception = e
-      result = e
 
       Pry.critical_section do
-        show_result(result)
+        @callbacks.handle_error.call(e, self)
       end
       return
     end
@@ -321,10 +333,6 @@ class Pry
     end
 
     if complete_expr
-      if @eval_string =~ /;\Z/ || @eval_string.empty? || @eval_string =~ /\A *#.*\n\z/
-        @suppress_output = true
-      end
-
       begin
         # Reset eval string, in case we're evaluating Ruby that does something
         # like open a nested REPL on this instance.
@@ -332,13 +340,18 @@ class Pry
         reset_eval_string
 
         result = evaluate_ruby(eval_string)
+
+        if should_print?(eval_string)
+          Pry.critical_section do
+            @callbacks.handle_result.call(result, self)
+          end
+        end
       rescue RescuableException => e
         self.last_exception = e
-        result = e
-      end
 
-      Pry.critical_section do
-        show_result(result)
+        Pry.critical_section do
+          @callbacks.handle_error.call(e, self)
+        end
       end
     end
 
@@ -373,16 +386,8 @@ class Pry
     exec_hook :after_eval, result, self
   end
 
-  # Output the result or pass to an exception handler (if result is an exception).
-  def show_result(result)
-    if last_result_is_exception?
-      exception_handler.call(output, result, self)
-    elsif should_print?
-      output.write(Pry.config.output_prefix)
-      print.call(output, result)
-    else
-      # nothin'
-    end
+  def guard_output
+    yield
   rescue RescuableException => e
     # Being uber-paranoid here, given that this exception arose because we couldn't
     # serialize something in the user's program, let's not assume we can serialize
@@ -538,11 +543,12 @@ class Pry
     @last_result_is_exception
   end
 
-  # Whether the print proc should be invoked.
-  # Currently only invoked if the output is not suppressed.
-  # @return [Boolean] Whether the print proc should be invoked.
-  def should_print?
-    !@suppress_output
+  # Do we want to show the result of evaluating the given string?
+  # @return [Boolean]
+  def should_print?(str)
+    !(str.empty?   ||
+      str =~ /;\Z/ ||
+      str =~ /\A *#.*\n\z/)
   end
 
   # Returns the appropriate prompt to use.
