@@ -420,7 +420,6 @@ describe Pry::Hooks do
               Pry.start(self, :hooks => hooks, :commands => commands)
             end
             out.string.should =~ /in hours of bitterness i imagine balls of sapphire, of metal/
-            out.string.should.not =~ /little_duck/
           end
         end
 
