@@ -131,14 +131,14 @@ class Pry
   end
 
   def set_default_callbacks
-    @callbacks.handle_result = proc do |result|
+    @callbacks.handle_result = proc do |result, _|
       guard_output do
         output.write(Pry.config.output_prefix)
         print.call(output, result)
       end
     end
 
-    @callbacks.handle_error = proc do |error|
+    @callbacks.handle_error = proc do |error, _|
       guard_output do
         exception_handler.call(output, error, self)
       end
