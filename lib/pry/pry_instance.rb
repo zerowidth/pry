@@ -53,6 +53,7 @@ class Pry
 
   attr_reader :exit_value
 
+  attr_accessor :callbacks
   attr_reader :hooks # Special treatment as we want to alert people of the
                      # changed API.
 
@@ -131,17 +132,20 @@ class Pry
   end
 
   def set_default_callbacks
-    @callbacks.handle_result = proc do |result, _|
+    @callbacks.handle_result = proc do |result|
       guard_output do
         output.write(Pry.config.output_prefix)
         print.call(output, result)
       end
     end
 
-    @callbacks.handle_error = proc do |error, _|
+    @callbacks.handle_error = proc do |error|
       guard_output do
         exception_handler.call(output, error, self)
       end
+    end
+
+    @callbacks.handle_continuation = proc do |eval_string|
     end
   end
 
@@ -316,7 +320,7 @@ class Pry
       self.last_exception = e
 
       Pry.critical_section do
-        @callbacks.handle_error.call(e, self)
+        @callbacks.handle_error.call(e)
       end
       return
     end
@@ -343,16 +347,18 @@ class Pry
 
         if should_print?(eval_string)
           Pry.critical_section do
-            @callbacks.handle_result.call(result, self)
+            @callbacks.handle_result.call(result)
           end
         end
       rescue RescuableException => e
         self.last_exception = e
 
         Pry.critical_section do
-          @callbacks.handle_error.call(e, self)
+          @callbacks.handle_error.call(e)
         end
       end
+    else
+      @callbacks.handle_continuation.call(@eval_string)
     end
 
     throw(:breakout) if current_binding.nil?
