@@ -124,12 +124,7 @@ class Pry
     def read_line(current_prompt)
       handle_read_errors do
         handle_eof do
-          if defined? Coolline and input.is_a? Coolline
-            input.completion_proc = proc do |cool|
-              completions = @pry.complete cool.completed_word
-              completions.compact
-            end
-          elsif input.respond_to? :completion_proc=
+          if input.respond_to? :completion_proc=
             input.completion_proc = proc do |input|
               @pry.complete input
             end
@@ -140,14 +135,10 @@ class Pry
               Readline.output = File.open('/dev/tty', 'w')
             end
             input_readline(current_prompt, false) # false since we'll add it manually
-          elsif defined? Coolline and input.is_a? Coolline
+          elsif input.method(:readline).arity == 1
             input_readline(current_prompt)
           else
-            if input.method(:readline).arity == 1
-              input_readline(current_prompt)
-            else
-              input_readline
-            end
+            input_readline
           end
         end
       end
