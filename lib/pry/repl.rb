@@ -118,26 +118,58 @@ class Pry
       indented_val
     end
 
-    # Returns the next line of input to be sent to the {Pry} instance.
-    # @param [String] current_prompt The prompt to use for input.
-    # @return [String?] The next line of input, or `nil` on <Ctrl-D>.
-    def read_line(current_prompt)
-      handle_read_errors do
-        handle_eof do
-          set_completion_proc
+    # Return the next line of input to be sent to the {Pry} instance.
+    # @param [String] prompt The prompt to use for input.
+    # @return [nil] On `<Ctrl-D>`.
+    # @return [:control_c] On `<Ctrl+C>`.
+    # @return [:no_more_input] On EOF.
+    def read_line(prompt)
+      with_error_handling do
+        set_completion_proc
 
-          if input == Readline
-            if !$stdout.tty? && $stdin.tty? && !Pry::Helpers::BaseHelpers.windows?
-              Readline.output = File.open('/dev/tty', 'w')
-            end
-            input_readline(current_prompt, false) # false since we'll add it manually
-          elsif input.method(:readline).arity == 1
-            input_readline(current_prompt)
-          else
-            input_readline
+        if input == Readline
+          if !$stdout.tty? && $stdin.tty? && !Pry::Helpers::BaseHelpers.windows?
+            Readline.output = File.open('/dev/tty', 'w')
+          end
+          input_readline(prompt, false) # false since we'll add it manually
+        elsif input.method(:readline).arity == 1
+          input_readline(prompt)
+        else
+          input_readline
+        end
+      end
+    end
+
+    # Wrap the given block with our default error handling ({handle_eof},
+    # {handle_interrupt}, and {handle_read_errors}).
+    def with_error_handling
+      handle_read_errors do
+        handle_interrupt do
+          handle_eof do
+            yield
           end
         end
       end
+    end
+
+    # Set the default completion proc, if applicable.
+    def set_completion_proc
+      if input.respond_to? :completion_proc=
+        input.completion_proc = proc do |input|
+          @pry.complete input
+        end
+      end
+    end
+
+    # Handle `Ctrl-C` like Bash: empty the current input buffer, but don't
+    # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
+    # send Interrupt from within Readline.
+    # @return [Object] Whatever the given block returns.
+    # @return [:control_c] Indicates that the user hit `Ctrl-C`.
+    def handle_interrupt
+      yield
+    rescue Interrupt
+      return :control_c
     end
 
     # Deal with any random errors that happen while trying to get user input.
@@ -148,11 +180,6 @@ class Pry
 
       begin
         yield
-      # Handle <Ctrl+C> like Bash: empty the current input buffer, but don't
-      # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
-      # send Interrupt from within Readline.
-      rescue Interrupt
-        return :control_c
       # If we get a random error when trying to read a line we don't want to
       # automatically retry, as the user will see a lot of error messages
       # scroll past and be unable to do anything about it.
@@ -191,14 +218,6 @@ class Pry
           output.puts "Error: Pry ran out of things to read from! " \
             "Attempting to break out of REPL."
           return :no_more_input
-        end
-      end
-    end
-
-    def set_completion_proc
-      if input.respond_to? :completion_proc=
-        input.completion_proc = proc do |input|
-          @pry.complete input
         end
       end
     end
