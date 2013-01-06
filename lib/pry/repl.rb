@@ -124,11 +124,7 @@ class Pry
     def read_line(current_prompt)
       handle_read_errors do
         handle_eof do
-          if input.respond_to? :completion_proc=
-            input.completion_proc = proc do |input|
-              @pry.complete input
-            end
-          end
+          set_completion_proc
 
           if input == Readline
             input.readline(current_prompt, false) # false since we'll add it manually
@@ -194,6 +190,16 @@ class Pry
         puts "  Pry.config.output = STDOUT"
         puts "  binding.pry"
         return :no_more_input
+      end
+    end
+
+    private
+
+    def set_completion_proc
+      if input.respond_to? :completion_proc=
+        input.completion_proc = proc do |input|
+          @pry.complete input
+        end
       end
     end
   end
