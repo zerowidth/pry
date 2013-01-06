@@ -146,13 +146,13 @@ class Pry
     def handle_read_errors
       exception_count = 0
 
+      begin
+        yield
       # Handle <Ctrl+C> like Bash: empty the current input buffer, but don't
       # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
       # send Interrupt from within Readline.
-      begin
-        yield
       rescue Interrupt
-        raise
+        return :control_c
       # If we get a random error when trying to read a line we don't want to
       # automatically retry, as the user will see a lot of error messages
       # scroll past and be unable to do anything about it.
