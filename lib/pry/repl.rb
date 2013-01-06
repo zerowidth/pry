@@ -118,28 +118,71 @@ class Pry
       indented_val
     end
 
+    # Returns the next line of input to be sent to the {Pry} instance.
+    # @param [String] current_prompt The prompt to use for input.
+    # @return [String?] The next line of input, or `nil` on <Ctrl-D>.
+    def read_line(current_prompt)
+      handle_read_errors do
+        handle_eof do
+          if defined? Coolline and input.is_a? Coolline
+            input.completion_proc = proc do |cool|
+              completions = @pry.complete cool.completed_word
+              completions.compact
+            end
+          elsif input.respond_to? :completion_proc=
+            input.completion_proc = proc do |input|
+              @pry.complete input
+            end
+          end
+
+          if input == Readline
+            input.readline(current_prompt, false) # false since we'll add it manually
+          elsif defined? Coolline and input.is_a? Coolline
+            input.readline(current_prompt)
+          else
+            if input.method(:readline).arity == 1
+              input.readline(current_prompt)
+            else
+              input.readline
+            end
+          end
+        end
+      end
+    end
+
     # Manage switching of input objects on encountering `EOFError`s.
     # @return [Object] Whatever the given block returns.
     # @return [:no_more_input] Indicates that no more input can be read.
-    def handle_read_errors
+    def handle_eof
       should_retry = true
-      exception_count = 0
 
       begin
         yield
       rescue EOFError
         pry.input = Pry.config.input
-        if !should_retry
+
+        if should_retry
+          should_retry = false
+          retry
+        else
           output.puts "Error: Pry ran out of things to read from! " \
             "Attempting to break out of REPL."
           return :no_more_input
         end
-        should_retry = false
-        retry
+      end
+    end
+
+    # Deal with any random errors that happen while trying to get user input.
+    # @return [Object] Whatever the given block returns.
+    # @return [:no_more_input] Indicates that no more input can be read.
+    def handle_read_errors
+      exception_count = 0
 
       # Handle <Ctrl+C> like Bash: empty the current input buffer, but don't
       # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
       # send Interrupt from within Readline.
+      begin
+        yield
       rescue Interrupt
         return :control_c
 
@@ -160,36 +203,6 @@ class Pry
         puts "  Pry.config.output = STDOUT"
         puts "  binding.pry"
         return :no_more_input
-      end
-    end
-
-    # Returns the next line of input to be sent to the {Pry} instance.
-    # @param [String] current_prompt The prompt to use for input.
-    # @return [String?] The next line of input, or `nil` on <Ctrl-D>.
-    def read_line(current_prompt)
-      handle_read_errors do
-        if defined? Coolline and input.is_a? Coolline
-          input.completion_proc = proc do |cool|
-            completions = @pry.complete cool.completed_word
-            completions.compact
-          end
-        elsif input.respond_to? :completion_proc=
-          input.completion_proc = proc do |input|
-            @pry.complete input
-          end
-        end
-
-        if input == Readline
-          input.readline(current_prompt, false) # false since we'll add it manually
-        elsif defined? Coolline and input.is_a? Coolline
-          input.readline(current_prompt)
-        else
-          if input.method(:readline).arity == 1
-            input.readline(current_prompt)
-          else
-            input.readline
-          end
-        end
       end
     end
   end
