@@ -65,7 +65,7 @@ class Pry
     #   thrown with it.
     def repl
       loop do
-        case val = read
+        case val = read(pry.select_prompt)
         when :control_c
           output.puts ""
           pry.reset_eval_string
@@ -86,16 +86,16 @@ class Pry
     end
 
     # Read a line of input from the user.
+    # @param [String] prompt The prompt to use for input.
     # @return [String] The line entered by the user.
     # @return [nil] On `<Ctrl-D>`.
     # @return [:control_c] On `<Ctrl+C>`.
     # @return [:no_more_input] On EOF.
-    def read
+    def read(prompt)
       @indent.reset if pry.eval_string.empty?
-      current_prompt = pry.select_prompt
       indentation = Pry.config.auto_indent ? @indent.current_prefix : ''
 
-      val = read_line("#{current_prompt}#{indentation}")
+      val = read_line("#{prompt}#{indentation}")
 
       # Return nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
       return val unless String === val
@@ -106,7 +106,7 @@ class Pry
 
         if output.tty? && @indent.should_correct_indentation?
           output.print @indent.correct_indentation(
-            current_prompt, indented_val,
+            prompt, indented_val,
             original_val.length - indented_val.length
           )
           output.flush
