@@ -98,25 +98,12 @@ class Pry
 
       val = read_line("#{prompt}#{indentation}")
 
-      # Return nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
-      return val unless String === val
-
-      if Pry.config.auto_indent
-        original_val = "#{indentation}#{val}"
-        indented_val = @indent.indent(val)
-
-        if output.tty? && @indent.should_correct_indentation?
-          output.print @indent.correct_indentation(
-            prompt, indented_val,
-            original_val.length - indented_val.length
-          )
-          output.flush
-        end
+      if val.is_a? String
+        fix_indentation(val, indentation)
       else
-        indented_val = val
+        # nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
+        val
       end
-
-      indented_val
     end
 
     # Return the next line of input to be sent to the {Pry} instance.
@@ -221,5 +208,25 @@ class Pry
         return :no_more_input
       end
     end
+
+    def fix_indentation(line, indentation)
+      if Pry.config.auto_indent
+        original_line = "#{indentation}#{line}"
+        indented_line = @indent.indent(line)
+
+        if output.tty? && @indent.should_correct_indentation?
+          output.print @indent.correct_indentation(
+            prompt, indented_line,
+            original_line.length - indented_line.length
+          )
+          output.flush
+        end
+
+        indented_line
+      else
+        line
+      end
+    end
+
   end
 end
