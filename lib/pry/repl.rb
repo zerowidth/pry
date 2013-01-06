@@ -124,11 +124,7 @@ class Pry
     def read_line(current_prompt)
       handle_read_errors do
         handle_eof do
-          if input.respond_to? :completion_proc=
-            input.completion_proc = proc do |input|
-              @pry.complete input
-            end
-          end
+          set_completion_proc
 
           if input == Readline
             if !$stdout.tty? && $stdin.tty? && !Pry::Helpers::BaseHelpers.windows?
@@ -195,6 +191,14 @@ class Pry
           output.puts "Error: Pry ran out of things to read from! " \
             "Attempting to break out of REPL."
           return :no_more_input
+        end
+      end
+    end
+
+    def set_completion_proc
+      if input.respond_to? :completion_proc=
+        input.completion_proc = proc do |input|
+          @pry.complete input
         end
       end
     end
