@@ -65,18 +65,23 @@ class Pry
     #   thrown with it.
     def repl
       loop do
-        case val = read(pry.select_prompt)
+        case line = read(pry.select_prompt)
         when :control_c
-          output.puts ""
+          advance_cursor
           pry.reset_eval_string
         when :no_more_input
-          output.puts "" if output.tty?
+          advance_cursor
           break
         else
-          output.puts "" if val.nil? && output.tty?
-          return pry.exit_value unless pry.eval(val)
+          advance_cursor if line.nil?
+          return pry.exit_value unless pry.eval(line)
         end
       end
+    end
+
+    # Print an empty line if the output is a TTY.
+    def advance_cursor
+      output.puts "" if output.tty?
     end
 
     # Clean up after the repl session.
