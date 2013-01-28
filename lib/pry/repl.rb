@@ -90,55 +90,21 @@ class Pry
       pry.exec_hook :after_session, pry.output, pry.current_binding, pry
     end
 
-    # Read a line of input from the user.
+    # Return the next line of input to be sent to the {Pry} instance.
     # @param [String] prompt The prompt to use for input.
     # @return [String] The line entered by the user.
     # @return [nil] On `<Ctrl-D>`.
     # @return [:control_c] On `<Ctrl+C>`.
     # @return [:no_more_input] On EOF.
     def read(prompt)
-      @indent.reset if pry.eval_string.empty?
+      set_completion_proc
 
-      indentation = Pry.config.auto_indent ? @indent.current_prefix : ''
-
-      val = read_line("#{prompt}#{indentation}")
-
-      if val.is_a? String
-        fix_indentation(val, indentation)
+      if input == Readline
+        input.readline(prompt, false) # false since we'll add it manually
+      elsif input.method(:readline).arity == 1
+        input.readline(prompt)
       else
-        # nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
-        val
-      end
-    end
-
-    # Return the next line of input to be sent to the {Pry} instance.
-    # @param [String] prompt The prompt to use for input.
-    # @return [nil] On `<Ctrl-D>`.
-    # @return [:control_c] On `<Ctrl+C>`.
-    # @return [:no_more_input] On EOF.
-    def read_line(prompt)
-      with_error_handling do
-        set_completion_proc
-
-        if input == Readline
-          input.readline(prompt, false) # false since we'll add it manually
-        elsif input.method(:readline).arity == 1
-          input.readline(prompt)
-        else
-          input.readline
-        end
-      end
-    end
-
-    # Wrap the given block with our default error handling ({handle_eof},
-    # {handle_interrupt}, and {handle_read_errors}).
-    def with_error_handling
-      handle_read_errors do
-        handle_interrupt do
-          handle_eof do
-            yield
-          end
-        end
+        input.readline
       end
     end
 
@@ -156,11 +122,11 @@ class Pry
     # Manage switching of input objects on encountering `EOFError`s.
     # @return [Object] Whatever the given block returns.
     # @return [:no_more_input] Indicates that no more input can be read.
-    def handle_eof
+    def read_with_handle_eof(prompt)
       should_retry = true
 
       begin
-        yield
+        read_without_handle_eof(prompt)
       rescue EOFError
         pry.input = Pry.config.input
 
@@ -174,26 +140,30 @@ class Pry
         end
       end
     end
+    alias_method :read_without_handle_eof, :read
+    alias_method :read, :read_with_handle_eof
 
     # Handle `Ctrl-C` like Bash: empty the current input buffer, but don't
     # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
     # send Interrupt from within Readline.
     # @return [Object] Whatever the given block returns.
     # @return [:control_c] Indicates that the user hit `Ctrl-C`.
-    def handle_interrupt
-      yield
+    def read_with_handle_interrupt(prompt)
+      read_without_handle_interrupt(prompt)
     rescue Interrupt
       return :control_c
     end
+    alias_method :read_without_handle_interrupt, :read
+    alias_method :read, :read_with_handle_interrupt
 
     # Deal with any random errors that happen while trying to get user input.
     # @return [Object] Whatever the given block returns.
     # @return [:no_more_input] Indicates that no more input can be read.
-    def handle_read_errors
+    def read_with_handle_read_errors(prompt)
       exception_count = 0
 
       begin
-        yield
+        read_without_handle_read_errors(prompt)
       # If we get a random error when trying to read a line we don't want to
       # automatically retry, as the user will see a lot of error messages
       # scroll past and be unable to do anything about it.
@@ -213,8 +183,27 @@ class Pry
         return :no_more_input
       end
     end
+    alias_method :read_without_handle_read_errors, :read
+    alias_method :read, :read_with_handle_read_errors
 
-    def fix_indentation(line, indentation)
+    def read_with_fix_indentation(prompt)
+      @indent.reset if pry.eval_string.empty?
+
+      indentation = Pry.config.auto_indent ? @indent.current_prefix : ''
+
+      line = read_without_fix_indentation("#{prompt}#{indentation}")
+
+      if line.is_a? String
+        fix_indentation(line, indentation, prompt)
+      else
+        # nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
+        line
+      end
+    end
+    alias_method :read_without_fix_indentation, :read
+    alias_method :read, :read_with_fix_indentation
+
+    def fix_indentation(line, indentation, prompt)
       if Pry.config.auto_indent
         original_line = "#{indentation}#{line}"
         indented_line = @indent.indent(line)
@@ -232,6 +221,5 @@ class Pry
         line
       end
     end
-
   end
 end
