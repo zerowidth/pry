@@ -29,6 +29,7 @@ class Pry
         # show a specific code object
         co = code_object_with_accessible_source(code_object)
         result = content_and_header_for_code_object(co)
+        raise CommandError, no_comments_message if !result
       end
 
       set_file_and_dir_locals(code_object.source_file)
@@ -63,7 +64,8 @@ class Pry
     end
 
     def content_and_header_for_code_object(code_object)
-      header(code_object) + content_for(code_object)
+      content = content_for(code_object)
+      header(code_object) + content unless content.strip.empty?
     end
 
     def content_and_headers_for_all_module_candidates(mod)
@@ -85,6 +87,10 @@ class Pry
 
     def no_definition_message
       "Couldn't locate a definition for #{obj_name}!"
+    end
+
+    def no_comments_message
+      "The definition of #{ obj_name } has no associated comments"
     end
 
     # Generate a header (meta-data information) for all the code

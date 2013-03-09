@@ -61,6 +61,18 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
       t.eval("show-doc o.initialize -sss").should =~ /daddy initialize/
     end
 
+    it "should not 'display' nonexistent docs" do
+      def @o.no_docs!
+        :no_docs!
+      end
+
+      should.raise(Pry::CommandError) {
+        pry_eval(binding, 'show-doc @o.no_docs!')
+      }.message.should =~ /The definition of @o.no_docs! has no associated comments/
+
+      class << @o; remove_method(:no_docs!); end
+    end
+
     describe "rdoc highlighting" do
       it "should syntax highlight code in rdoc" do
         c = Class.new{
@@ -271,8 +283,9 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
               def o;end
             end
 
-            result = pry_eval('show-doc Aarrrrrghh')
-            result.should.not =~ /available monkeypatches/
+            should.raise(Pry::CommandError) {
+              pry_eval('show-doc Aarrrrrghh')
+            }.message.should =~ /The definition of Aarrrrrghh has no associated comments/
             Object.remove_const(:Aarrrrrghh)
           end
         end
@@ -388,8 +401,8 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
       end
     end
 
-    describe "should set _file_ and _dir_" do
-      it 'should set _file_ and _dir_ to file containing method source' do
+    describe "setting _file_ and _dir_" do
+      it 'sets file containing method source' do
         t = pry_tester
         t.process_command "show-doc TestClassForShowSource#alpha"
         t.pry.last_file.should =~ /show_source_doc_examples/
