@@ -61,16 +61,30 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
       t.eval("show-doc o.initialize -sss").should =~ /daddy initialize/
     end
 
-    it "should not 'display' nonexistent docs" do
-      def @o.no_docs!
-        :no_docs!
+    describe "nonexistent docs" do
+      after do
+        class << @o; remove_method(:no_docs!); end
       end
 
-      should.raise(Pry::CommandError) {
-        pry_eval(binding, 'show-doc @o.no_docs!')
-      }.message.should =~ /The definition of @o.no_docs! has no associated comments/
+      it "should not 'display' them" do
+        def @o.no_docs!
+          :no_docs!
+        end
 
-      class << @o; remove_method(:no_docs!); end
+        should.raise(Pry::CommandError) {
+          pry_eval(binding, 'show-doc @o.no_docs!')
+        }.message.should =~ /The definition of @o.no_docs! has no associated comments/
+      end
+
+      it "should not 'display' them; but should print a special message for current context" do
+        def @o.no_docs!
+          pry_eval(binding, 'show-doc')
+        end
+
+        should.raise(Pry::CommandError) {
+          @o.no_docs!
+        }.message.should =~ /The current definition has no associated comments/
+      end
     end
 
     describe "rdoc highlighting" do

@@ -90,7 +90,11 @@ class Pry
     end
 
     def no_comments_message
-      "The definition of #{ obj_name } has no associated comments"
+      if obj_name
+        "The definition of #{ obj_name } has no associated comments"
+      else
+        'The current definition has no associated comments'
+      end
     end
 
     # Generate a header (meta-data information) for all the code
