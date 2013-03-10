@@ -178,4 +178,10 @@ describe "hist" do
     @str_output.string.each_line.to_a.reject { |line| line !~ /\A\d/ }.size.should == 5
     @str_output.string.should =~ /a is 2/
   end
+
+  it "excludes Pry commands from the history with `-e` switch" do
+    @hist.push('a = 20')
+    @hist.push('ls')
+    pry_eval('hist -e').should == "1: a = 20\n"
+  end
 end
