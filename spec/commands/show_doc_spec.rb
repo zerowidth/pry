@@ -54,6 +54,9 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
         class Grungy < Classy
           # grungy initialize??
           def initialize(*args); end
+
+          # super grungy!
+          def super(*args); end
         end
 
         @o = Grungy.new
@@ -66,6 +69,59 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
         Object.remove_const(:Grungy)
         Object.remove_const(:Classy)
         Object.remove_const(:Daddy)
+      end
+
+      describe "without the switch but with the super keyword" do
+        it "finds super methods docs without with the super keyword" do
+          fatty = Grungy.new
+
+          # fatty initialize!
+          def fatty.initialize
+            pry_eval(binding, 'show-doc super')
+          end
+
+          fatty.initialize.should =~ /grungy initialize/
+        end
+
+        it "allows getting method docs for a method called `super`" do
+          fatty = Grungy.new
+
+          # supa fatty
+          def fatty.super(*bars); end
+
+          # fatty initialize!
+          def fatty.initialize
+            pry_eval(binding, 'show-doc super')
+          end
+
+          fatty.initialize.should =~ /supa fatty/
+        end
+      end
+
+      describe "the switch plus the keyword" do
+        it "allows getting a super method docs of a method called `super`" do
+          fatty = Grungy.new
+
+          # super initialize!
+          def fatty.super(*bars); end
+
+          def fatty.initialize
+            pry_eval(binding, 'show-doc super --super')
+          end
+
+          fatty.initialize.should =~ /super grungy/
+        end
+
+        it "allows getting a second super method docs of a method with any name" do
+          fatty = Grungy.new
+
+          # fatty initialize!
+          def fatty.initialize
+            pry_eval(binding, 'show-doc super --super')
+          end
+
+          fatty.initialize.should =~ /classy initialize/
+        end
       end
 
       it "finds super method docs" do
@@ -95,7 +151,7 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
         output.should =~ /grungy initialize/
       end
 
-      it "finds super method docs without `--super` but with the `super` keyword" do
+      it "finds super methods docs with multiple --super" do
         fatty = Grungy.new
 
         fatty.extend Module.new {

@@ -172,6 +172,10 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
           def foo(*bars)
             :super_wibble
           end
+
+          def super(*bars)
+            :super_super
+          end
         end
       end
 
@@ -179,8 +183,67 @@ if !PryTestHelpers.mri18_and_no_real_source_location?
         Object.remove_const(:Foo)
       end
 
-      it "finds super methods with explicit method argument" do
+      describe "without the switch but with the super keyword" do
+        it "finds super method" do
+          o = Foo.new
 
+          def o.foo(*bars)
+            :wibble
+            pry_eval(binding, 'show-source super')
+          end
+
+          o.foo.should =~ /:super_wibble/
+        end
+
+        it "allows getting a regular method called `super`" do
+          o = Foo.new
+
+          def o.super(*bars)
+            :nibble
+          end
+
+          def o.foo(*bars)
+            :wibble
+            pry_eval(binding, 'show-source super')
+          end
+
+          o.foo.should =~ /:nibble/
+        end
+      end
+
+      describe "the switch plus the keyword" do
+        it "allows getting a super method of a regular method called `super`" do
+          o = Foo.new
+
+          def o.super(*bars)
+            :nibble
+          end
+
+          def o.foo(*bars)
+            :wibble
+            pry_eval(binding, 'show-source super --super')
+          end
+
+          o.foo.should =~ /:super_super/
+        end
+
+        it "allows getting a second super method of a method with any name" do
+          klass = Class.new(Foo) {
+            def foo(*bars)
+              :middle_super_wibble
+            end
+          }
+          o = klass.new
+          def o.foo(*bars)
+            :wibble
+            pry_eval(binding, 'show-source super --super')
+          end
+
+          o.foo.should =~ /:super_wibble/
+        end
+      end
+
+      it "finds super methods with explicit method argument" do
         o = Foo.new
         def o.foo(*bars)
           :wibble
