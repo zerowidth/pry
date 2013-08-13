@@ -24,3 +24,4 @@ branches:
   only:
     - master
     - 0-9-11-stable
+    - improve_basic_object_support
