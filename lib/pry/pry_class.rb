@@ -417,12 +417,10 @@ Readline version #{ver} detected - will not auto_resize! correctly.
   def self.binding_for(target)
     if Binding === target
       target
+    elsif TOPLEVEL_BINDING.eval('self') == target
+      TOPLEVEL_BINDING
     else
-      if TOPLEVEL_BINDING.eval('self') == target
-        TOPLEVEL_BINDING
-      else
-        target.__binding__
-      end
+      Pry::SafeProxy(target).__binding__
     end
   end
 

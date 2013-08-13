@@ -15,12 +15,14 @@ class Pry
         end
       end
 
-      # Acts like send but ignores any methods defined below Object or Class in the
-      # inheritance hierarchy.
-      # This is required to introspect methods on objects like Net::HTTP::Get that
-      # have overridden the `method` method.
+      # Acts like send but ignores any methods defined below Kernel or Module
+      # in the inheritance hierarchy.
+      # This is required to introspect methods on objects like Net::HTTP::Get
+      # that have overridden the `method` method.
+      # @see Pry::SafeProxy
       def safe_send(obj, method, *args, &block)
-        (Module === obj ? Module : Object).instance_method(method).bind(obj).call(*args, &block)
+        klass = Module === obj ? Module : Kernel
+        klass.instance_method(method).bind(obj).call(*args, &block)
       end
       public :safe_send
 

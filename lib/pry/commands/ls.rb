@@ -154,20 +154,19 @@ class Pry
 
     # Get a lambda that can be used with .take_while to prevent over-eager
     # traversal of the Object's ancestry graph.
-    def below_ceiling(obj)
+    def below_ceiling
       ceiling = if opts.present?(:quiet)
-                   [
-                     if opts.present?(:'instance-methods')
-                       Pry::Method.safe_send(obj, :ancestors)[1]
-                     else
-                       Pry::Method.safe_send(obj.class, :ancestors)[1]
-                     end
-                   ] + Pry.config.ls.ceiling
-                 elsif opts.present?(:verbose)
-                   []
-                 else
-                   Pry.config.ls.ceiling.dup
-                 end
+                  klass = if opts.present?(:'instance-methods')
+                    safe_object
+                  else
+                    safe_module
+                  end
+                  [klass.ancestors[1]] + Pry.config.ls.ceiling
+                elsif opts.present?(:verbose)
+                  []
+                else
+                  Pry.config.ls.ceiling.dup
+                end
 
       lambda { |klass| !ceiling.include?(klass) }
     end
@@ -187,6 +186,22 @@ class Pry
       (Module === object_to_interrogate)
     end
 
+    def module_to_interrogate
+      @module_to_interrogate ||= if interrogating_a_module?
+        object_to_interrogate
+      else
+        safe_object.class
+      end
+    end
+
+    def safe_object
+      @safe_object ||= Pry::SafeProxy.new(object_to_interrogate)
+    end
+
+    def safe_module
+      @safe_module ||= Pry::SafeProxy.new(module_to_interrogate)
+    end
+
     def write_out_globals
       return unless opts.present?(:globals)
 
@@ -196,9 +211,8 @@ class Pry
     def write_out_constants
       return unless opts.present?(:constants) || (!has_user_specified_any_options && interrogating_a_module?)
 
-      mod = interrogating_a_module? ? object_to_interrogate : object_to_interrogate.class
-      constants = WrappedModule.new(mod).constants(opts.present?(:verbose))
-      output_section("constants", grep[format_constants(mod, constants)])
+      constants = WrappedModule.new(module_to_interrogate).constants(opts.present?(:verbose))
+      output_section("constants", grep[format_constants(module_to_interrogate, constants)])
     end
 
     def write_out_methods
@@ -209,7 +223,7 @@ class Pry
 
       output = ""
       # reverse the resolution order so that the most useful information appears right by the prompt
-      resolution_order(object_to_interrogate).take_while(&below_ceiling(object_to_interrogate)).reverse.each do |klass|
+      resolution_order(object_to_interrogate).take_while(&below_ceiling).reverse.each do |klass|
         methods_here = format_methods((methods[klass] || []).select{ |m| m.name =~ grep_regex })
         output << output_section("#{Pry::WrappedModule.new(klass).method_prefix}methods", methods_here)
       end
@@ -226,9 +240,8 @@ class Pry
     def write_out_ivars
       return unless opts.present?(:ivars) || !has_user_specified_any_options
 
-      klass = (interrogating_a_module? ? object_to_interrogate : object_to_interrogate.class)
-      ivars = Pry::Method.safe_send(object_to_interrogate, :instance_variables)
-      kvars = Pry::Method.safe_send(klass, :class_variables)
+      ivars = safe_object.instance_variables
+      kvars = safe_module.class_variables
       output_section("instance variables", format_variables(:instance_var, ivars)) +
       output_section("class variables", format_variables(:class_var, kvars))
     end
@@ -236,7 +249,7 @@ class Pry
     def write_out_local_names
       return unless !has_user_specified_any_options && args.empty?
 
-      output_section("locals", format_local_names(grep[target.eval("local_variables")]))
+      output_section("locals", format_local_names(grep[target.eval("::Kernel.local_variables")]))
     end
 
     def write_out_locals
