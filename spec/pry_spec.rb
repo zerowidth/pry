@@ -91,7 +91,7 @@ describe Pry do
 
       if defined?(BasicObject)
         it 'should be able to operate inside the BasicObject class' do
-          pry_eval(BasicObject, ":foo", "Pad.obj = _")
+          pry_eval(BasicObject, ":foo", "::Pad.obj = _")
           Pad.obj.should == :foo
         end
       end

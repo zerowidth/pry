@@ -3,7 +3,7 @@ class Pry
   #   __binding__, along with line indication to be used with instance_eval (and
   #   friends).
   #
-  # @see Object#__binding__
+  # @see Kernel#__binding__
   BINDING_METHOD_IMPL = [<<-METHOD, __FILE__, __LINE__ + 1]
     # Get a binding with 'self' set to self, and no locals.
     #
@@ -14,12 +14,12 @@ class Pry
     #
     # @return [Binding]
     def __pry__
-      binding
+      ::Kernel.binding
     end
   METHOD
 end
 
-class Object
+module Kernel
   # Start a Pry REPL on self.
   #
   # If `self` is a Binding then that will be used to evaluate expressions;
@@ -71,12 +71,12 @@ class Object
     # eventually be returning.
 
     # When you're cd'd into a class, methods you define should be added to it.
-    if is_a?(Module)
+    if Module === self
       # class_eval sets both self and the default definee to this class.
       return class_eval "binding"
     end
 
-    unless respond_to?(:__pry__)
+    unless ::Pry::SafeProxy.new(self).respond_to?(:__pry__)
       # The easiest way to check whether an object has a working singleton class
       # is to try and define a method on it. (just checking for the presence of
       # the singleton class gives false positives for `true` and `false`).
