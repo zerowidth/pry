@@ -265,6 +265,7 @@ end
 
 require 'pry/version'
 require 'pry/repl/basic'
+require 'pry/repl/error_handling'
 require 'pry/repl/indentation'
 require 'pry/repl'
 require 'pry/rbx_path'

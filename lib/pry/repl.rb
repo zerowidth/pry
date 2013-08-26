@@ -3,6 +3,7 @@ require 'forwardable'
 class Pry
   class REPL
     include Pry::REPL::Basic
+    include Pry::REPL::ErrorHandling
     include Pry::REPL::Indentation
 
     extend Forwardable
